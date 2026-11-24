@@ -100,6 +100,27 @@ bool kvs_concurrent_ht_contains(
 size_t kvs_concurrent_ht_size(const kvs_concurrent_ht_t *ht);
 
 /**
+ * Callback signature for iterating over live key-value pairs during log compaction.
+ */
+typedef void (*kvs_entry_cb_t)(
+    const char *key,
+    size_t key_len,
+    const void *val,
+    size_t val_len,
+    void *user_data
+);
+
+/**
+ * Traverses all live entries in the concurrent table under shared read locks.
+ * Used for AOF log compaction and snapshotting.
+ */
+kvs_status_t kvs_concurrent_ht_for_each(
+    kvs_concurrent_ht_t *ht,
+    kvs_entry_cb_t cb,
+    void *user_data
+);
+
+/**
  * Destroys concurrent table, releases all entries and synchronization primitives.
  * Must only be called after all worker threads have completed operations.
  *

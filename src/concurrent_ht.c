@@ -464,6 +464,38 @@ size_t kvs_concurrent_ht_size(const kvs_concurrent_ht_t *ht) {
     return atomic_load(&ht->count);
 }
 
+kvs_status_t kvs_concurrent_ht_for_each(
+    kvs_concurrent_ht_t *ht,
+    kvs_entry_cb_t cb,
+    void *user_data
+) {
+    if (ht == NULL || ht->magic != KVS_CHT_MAGIC || cb == NULL) {
+        return KVS_ERR_INVALID_ARG;
+    }
+
+    pthread_rwlock_rdlock(&ht->resize_lock);
+
+    /* Acquire all stripe read locks in ascending order */
+    for (size_t s = 0; s < ht->num_stripes; s++) {
+        pthread_rwlock_rdlock(&ht->stripes[s].rwlock);
+    }
+
+    for (size_t i = 0; i < ht->capacity; i++) {
+        kvs_cnode_t *curr = ht->buckets[i];
+        while (curr != NULL) {
+            cb(curr->key, curr->key_len, curr->val, curr->val_len, user_data);
+            curr = curr->next;
+        }
+    }
+
+    for (size_t s = ht->num_stripes; s > 0; s--) {
+        pthread_rwlock_unlock(&ht->stripes[s - 1].rwlock);
+    }
+
+    pthread_rwlock_unlock(&ht->resize_lock);
+    return KVS_OK;
+}
+
 void kvs_concurrent_ht_destroy(kvs_concurrent_ht_t *ht) {
     if (ht == NULL || ht->magic != KVS_CHT_MAGIC) {
         return;

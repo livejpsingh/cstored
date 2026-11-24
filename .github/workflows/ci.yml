@@ -68,7 +68,7 @@ jobs:
         run: |
           cmake --build build --parallel
 
-      - name: Run Unit & Concurrency Tests (${{ matrix.profile }})
+      - name: Run Unit, Concurrency & Crash Recovery Tests (${{ matrix.profile }})
         run: |
           ctest --test-dir build --output-on-failure
 
@@ -104,3 +104,21 @@ jobs:
                    --track-origins=yes \
                    --error-exitcode=1 \
                    build/bin/test_concurrent_ht
+
+          valgrind --leak-check=full \
+                   --show-leak-kinds=all \
+                   --track-origins=yes \
+                   --error-exitcode=1 \
+                   build/bin/test_crc32c
+
+          valgrind --leak-check=full \
+                   --show-leak-kinds=all \
+                   --track-origins=yes \
+                   --error-exitcode=1 \
+                   build/bin/test_aof
+
+          valgrind --leak-check=full \
+                   --show-leak-kinds=all \
+                   --track-origins=yes \
+                   --error-exitcode=1 \
+                   build/bin/test_crash_recovery

@@ -1,6 +1,6 @@
 # cstored: Production-Grade Concurrent In-Memory Key-Value Store
 
-A high-performance, concurrent, in-memory key-value store with slab-allocated memory pools, cache-conscious hash tables, fine-grained lock striping, a fixed-worker thread pool, and persistent write-ahead logging (AOF) with CRC32C crash recovery, built in C17 targeting Linux/POSIX environments.
+A high-performance, concurrent, in-memory key-value store with slab-allocated memory pools, cache-conscious hash tables, fine-grained lock striping, a fixed-worker thread pool, persistent write-ahead logging (AOF) with CRC32C crash recovery, zero-allocation structured logging, and async-signal-safe runtime telemetry (`SIGUSR1`), built in C17 targeting Linux/POSIX environments.
 
 ---
 
@@ -21,7 +21,7 @@ Both outcomes harm the business: lost revenue from downtime, poor user conversio
 
 ---
 
-### How `cstored` Solves It (Phases 1, 2 & 3 — Core Engine & Durability)
+### How `cstored` Solves It (Phases 1, 2, 3 & 4 Complete)
 
 `cstored` provides a **provably safe, high-performance concurrent core** that eliminates the most common technical root causes of production failure.
 
@@ -32,6 +32,7 @@ Both outcomes harm the business: lost revenue from downtime, poor user conversio
 | **Data corruption & compliance risk** | Data races and use-after-free under concurrent mutation | **ThreadSanitizer-verified** zero races; **deep-copy-on-read** prevents dangling pointers | Data integrity and compliance by design |
 | **Deadlocks under load** | Lock-order inversion during dynamic hash table resizing | **Two-tier hierarchical lock protocol** (shared resize lock $\to$ stripe lock; resize acquires all stripes in strict ascending order) | Provably deadlock-free operations |
 | **Data loss on server panic / kill -9** | In-memory writes discarded when process aborts or container is restarted | **Append-Only File (AOF)** with 24-byte binary framing, Castagnoli **CRC32C checksums**, and automated trailing partial-write truncation | Durability by default (RPO = 0 with `SYNC_ALWAYS`); automatic crash self-repair |
+| **Production blindness & silent degradations** | Lack of real-time introspection into memory fragmentation and cache efficiency | **Async-signal-safe `SIGUSR1` telemetry dump** without `malloc` deadlocks; zero-allocation structured logging | Instant observability and live telemetry during production incidents |
 | **High cloud infra / maintenance cost** | Memory fragmentation from millions of small allocations + external cluster overhead | Slab allocator groups allocations into contiguous OS pages (`mmap`); zero third-party dependencies | Lower Total Cost of Ownership (TCO), reduced RAM footprint |
 
 ---
@@ -44,6 +45,7 @@ For engineering leadership and infrastructure architects, `cstored` offers:
 * **Proactive Risk Mitigation:** Rigorous sanitizer validation (ASan, UBSan, TSan) and Valgrind leak checking enforced in automated CI reduce production incident risk to near-zero.
 * **Linear Performance Headroom:** 64-way fine-grained lock striping scales throughput near-linearly with CPU cores, protecting system performance as traffic scales.
 * **Audit & Durability Compliance:** Checksummed write-ahead logging guarantees crash survivability, meeting enterprise disaster recovery standards.
+* **Production-Grade Observability:** Inspect memory maps, cache hit ratios, and persistence health live without stopping or perturbing worker threads.
 
 ---
 
@@ -52,7 +54,7 @@ For engineering leadership and infrastructure architects, `cstored` offers:
 * [x] **Phase 1 — Memory Engine & Hash Table:** Slab pool allocator, 64-bit MurmurHash3 table with $O(1)$ dynamic rehashing, strict compiler warnings, and Unity test harness.
 * [x] **Phase 2 — Concurrency & Scalability:** Fixed-worker thread pool, 64-way cache-line padded lock striping, concurrent client stress tests, and ThreadSanitizer validation.
 * [x] **Phase 3 — Durability & Crash Recovery:** Binary AOF persistence, Castagnoli CRC32C, atomic `.tmp` log compaction, and resilience tests surviving `kill -9`.
-* [ ] **Phase 4 — Observability & Hardening:** Async-signal-safe `SIGUSR1` telemetry dump (memory, cache hit rate, log ops) and structured non-blocking logging.
+* [x] **Phase 4 — Observability & Hardening:** Async-signal-safe `SIGUSR1` telemetry dump (memory, cache hit rate, log ops), zero-allocation structured logger, and adversarial fault-injection harness.
 * [ ] **Phase 5 — Production Sign-Off:** Operational runbook, final code audit, and benchmark review.
 
 ---
@@ -67,7 +69,7 @@ Detailed architectural and developer guides are located in the [`docs/`](file://
 
 ---
 
-## Architecture Overview (Phases 1, 2 & 3)
+## Architecture Overview (Phases 1, 2, 3 & 4)
 
 ```
 +------------------------------------------------------------------+
@@ -90,23 +92,58 @@ Detailed architectural and developer guides are located in the [`docs/`](file://
 |  - Independent parallel reads & writes without false sharing     |
 |  - O(1) dynamic rehashing synchronized across all stripes        |
 +------------------------------------------------------------------+
-          |                             |                       |
-(Node Allocations)               (Value Buffers)       (Durable Mutations)
-          v                             v                       v
-+-------------------+         +-----------------+     +--------------------+
-|  Slab Allocator   |         |   Heap / mmap   |     |    AOF Engine      |
-|  (kvs_slab_t)     |         +-----------------+     |    (kvs_aof_t)     |
-|  - Fixed pools    |                                 | - 24B Binary frame |
-|  - Double-free ck |                                 | - Castagnoli CRC   |
-+-------------------+                                 | - Crash recovery   |
-                                                      | - Log compaction   |
-                                                      +--------------------+
-                                                                |
-                                                                v
-                                                      +--------------------+
-                                                      | Disk Storage       |
-                                                      | (kvs.aof)          |
-                                                      +--------------------+
+          |                  |                  |                 |
+(Node Allocations)    (Value Buffers)   (Durable Writes)   (Telemetry)
+          v                  v                  v                 v
++-------------------+ +---------------+ +----------------+ +---------------+
+|  Slab Allocator   | |  Heap / mmap  | |  AOF Engine    | |  Telemetry &  |
+|  (kvs_slab_t)     | +---------------+ |  (kvs_aof_t)   | |  SIGUSR1 Dump |
+|  - Fixed pools    |                   | - 24B Framing  | | - Lock-free   |
+|  - Double-free ck |                   | - Castagnoli   | | - No malloc   |
++-------------------+                   | - Auto-repair  | | - Safe write  |
+                                        +----------------+ +---------------+
+                                                |                 ^
+                                                v                 |
+                                        +----------------+ [kill -USR1 <pid>]
+                                        | Disk Storage   |
+                                        | (kvs.aof)      |
+                                        +----------------+
+```
+
+---
+
+## Live Observability: Async-Signal-Safe `SIGUSR1` Telemetry
+
+Send `SIGUSR1` to the `cstored` process at any time to dump a non-disruptive, atomic diagnostic report directly to standard error or a configured metrics descriptor:
+
+```bash
+kill -USR1 <pid>
+```
+
+Output:
+```
+=======================================================
+           cstored RUNTIME TELEMETRY DUMP              
+=======================================================
+[Metrics & Cache Efficiency]
+  Total Operations: 5000000
+  GET Operations:   4200000
+  PUT Operations:   750000
+  DELETE Operations:50000
+  Cache Hits:       4050000
+  Cache Misses:     150000
+  Hit Rate:         96 %
+[Hash Table]
+  Active Items:     700000
+[Slab Allocator]
+  Active Chunks:    700000
+  Total Chunks:     1048576
+  Mapped Memory:    134217728 bytes
+[AOF Persistence]
+  Total Writes:     800000
+  Bytes Committed:  48291040
+  Syncs Executed:   800000
+=======================================================
 ```
 
 ---
@@ -132,7 +169,7 @@ cmake -B build/debug -G Ninja -DCMAKE_BUILD_TYPE=Debug
 cmake --build build/debug --parallel
 ```
 
-### 2. Run Test Suite
+### 2. Run Complete Test Suite (11 Test Suites)
 ```bash
 ctest --test-dir build/debug --output-on-failure
 ```
@@ -151,33 +188,35 @@ cmake --build build/asan --parallel
 ctest --test-dir build/asan --output-on-failure
 ```
 
-### 5. Valgrind Memory Leak & Error Check
+### 5. Valgrind Full Leak & Error Check
 ```bash
 valgrind --leak-check=full \
          --show-leak-kinds=all \
          --track-origins=yes \
          --error-exitcode=1 \
-         ./build/debug/bin/test_crash_recovery
+         ./build/debug/bin/test_fault_injection
 
 valgrind --leak-check=full \
          --show-leak-kinds=all \
          --track-origins=yes \
          --error-exitcode=1 \
-         ./build/debug/bin/test_aof
+         ./build/debug/bin/test_signal_handler
 
 valgrind --leak-check=full \
          --show-leak-kinds=all \
          --track-origins=yes \
          --error-exitcode=1 \
-         ./build/debug/bin/test_concurrent_ht
+         ./build/debug/bin/test_log
 ```
 
 ---
 
 ## C Pitfalls Avoided & Production Lessons Learned
 
-| C Pitfall / Concurrency Trap | Architectural Prevention in `cstored` |
+| C Pitfall / Systems Hazard | Architectural Prevention in `cstored` |
 | :--- | :--- |
+| **Signal Handler Heap Deadlock** | Calling `printf` or `malloc` in a signal handler is fatal. `cstored` uses custom async-signal-safe conversion (`kvs_safe_utoa`) and direct POSIX `write()`. |
+| **Log Line Interleaving / Corruption** | Multi-threaded `printf` calls tear lines. `cstored` formats logs on stack buffers and serializes writes via `pthread_mutex_t`. |
 | **Silent Log Corruption on Crash** | Fixed-size 24-byte binary framing with Castagnoli CRC32C checksums. Broken frames or partial writes are detected and truncated to the last transaction boundary. |
 | **Data Races in Hash Table Read/Write** | Lock striping with $N=64$ `pthread_rwlock_t` instances. Readers acquire shared locks; writers acquire exclusive stripe locks. Verified clean under ThreadSanitizer. |
 | **False Sharing Cache Invalidation** | Stripes are padded to 64 bytes (`_Alignas(64)`) to match modern CPU cache lines, preventing cache ping-pong between distinct CPU cores accessing adjacent locks. |

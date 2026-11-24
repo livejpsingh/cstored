@@ -68,57 +68,18 @@ jobs:
         run: |
           cmake --build build --parallel
 
-      - name: Run Unit, Concurrency & Crash Recovery Tests (${{ matrix.profile }})
+      - name: Run Complete Test Suite (${{ matrix.profile }})
         run: |
           ctest --test-dir build --output-on-failure
 
-      - name: Run Valgrind Leak Check
+      - name: Run Valgrind Full Leak & Error Check
         if: ${{ matrix.valgrind }}
         run: |
-          valgrind --leak-check=full \
-                   --show-leak-kinds=all \
-                   --track-origins=yes \
-                   --error-exitcode=1 \
-                   build/bin/test_slab
-
-          valgrind --leak-check=full \
-                   --show-leak-kinds=all \
-                   --track-origins=yes \
-                   --error-exitcode=1 \
-                   build/bin/test_hash
-
-          valgrind --leak-check=full \
-                   --show-leak-kinds=all \
-                   --track-origins=yes \
-                   --error-exitcode=1 \
-                   build/bin/test_hash_table
-
-          valgrind --leak-check=full \
-                   --show-leak-kinds=all \
-                   --track-origins=yes \
-                   --error-exitcode=1 \
-                   build/bin/test_thread_pool
-
-          valgrind --leak-check=full \
-                   --show-leak-kinds=all \
-                   --track-origins=yes \
-                   --error-exitcode=1 \
-                   build/bin/test_concurrent_ht
-
-          valgrind --leak-check=full \
-                   --show-leak-kinds=all \
-                   --track-origins=yes \
-                   --error-exitcode=1 \
-                   build/bin/test_crc32c
-
-          valgrind --leak-check=full \
-                   --show-leak-kinds=all \
-                   --track-origins=yes \
-                   --error-exitcode=1 \
-                   build/bin/test_aof
-
-          valgrind --leak-check=full \
-                   --show-leak-kinds=all \
-                   --track-origins=yes \
-                   --error-exitcode=1 \
-                   build/bin/test_crash_recovery
+          for test_bin in build/bin/test_*; do
+            echo "Running Valgrind on $test_bin"
+            valgrind --leak-check=full \
+                     --show-leak-kinds=all \
+                     --track-origins=yes \
+                     --error-exitcode=1 \
+                     "$test_bin"
+          done

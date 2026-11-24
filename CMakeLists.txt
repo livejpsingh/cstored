@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 project(cstored
-    VERSION 0.3.0
+    VERSION 0.4.0
     DESCRIPTION "A Production-Grade Multi-Threaded In-Memory Key-Value Store"
     LANGUAGES C
 )
@@ -38,6 +38,9 @@ set(KVS_LIB_SOURCES
     src/concurrent_ht.c
     src/crc32c.c
     src/aof.c
+    src/telemetry.c
+    src/log.c
+    src/signal_handler.c
 )
 
 add_library(kvs_core STATIC ${KVS_LIB_SOURCES})
@@ -95,4 +98,7 @@ if(KVS_BUILD_TESTS)
     kvs_add_unit_test(test_crc32c tests/test_crc32c.c)
     kvs_add_unit_test(test_aof tests/test_aof.c)
     kvs_add_unit_test(test_crash_recovery tests/test_crash_recovery.c)
+    kvs_add_unit_test(test_log tests/test_log.c)
+    kvs_add_unit_test(test_signal_handler tests/test_signal_handler.c)
+    kvs_add_unit_test(test_fault_injection tests/test_fault_injection.c)
 endif()

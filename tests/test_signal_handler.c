@@ -18,11 +18,11 @@
 static const char *TEST_STATS_PATH = "test_signal_dump.txt";
 
 void setUp(void) {
-    remove(TEST_STATS_PATH);
+    (void)remove(TEST_STATS_PATH);
 }
 
 void tearDown(void) {
-    remove(TEST_STATS_PATH);
+    (void)remove(TEST_STATS_PATH);
 }
 
 /* Test 1: Direct invocation of signal dump into pipe/file */

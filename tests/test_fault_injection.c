@@ -10,11 +10,11 @@
 static const char *FAULT_AOF_PATH = "fault_injection.aof";
 
 void setUp(void) {
-    remove(FAULT_AOF_PATH);
+    (void)remove(FAULT_AOF_PATH);
 }
 
 void tearDown(void) {
-    remove(FAULT_AOF_PATH);
+    (void)remove(FAULT_AOF_PATH);
 }
 
 /* Test 1: Key length boundary enforcement */
@@ -65,7 +65,8 @@ static void test_aof_corrupt_magic_recovery(void) {
     TEST_ASSERT_NOT_NULL(fp);
 
     uint8_t bad_frame[24] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
-    fwrite(bad_frame, 1, sizeof(bad_frame), fp);
+    size_t written = fwrite(bad_frame, 1, sizeof(bad_frame), fp);
+    (void)written;
     fclose(fp);
 
     kvs_aof_t *aof = NULL;

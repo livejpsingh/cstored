@@ -8,15 +8,15 @@
 static const char *TEST_LOG_PATH = "test_run.log";
 
 void setUp(void) {
-    remove(TEST_LOG_PATH);
+    (void)remove(TEST_LOG_PATH);
 }
 
 void tearDown(void) {
-    remove(TEST_LOG_PATH);
+    (void)remove(TEST_LOG_PATH);
 }
 
 static void log_task(void *arg) {
-    size_t id = (size_t)arg;
+    size_t id = (size_t)(uintptr_t)arg;
     for (int i = 0; i < 100; i++) {
         KVS_LOG_I("Worker task %zu executing iteration %d with payload", id, i);
     }
@@ -40,7 +40,7 @@ static void test_concurrent_logging(void) {
     TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_thread_pool_create(&cfg, &pool));
 
     for (size_t i = 0; i < 4; i++) {
-        TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_thread_pool_submit(pool, log_task, (void *)i));
+        TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_thread_pool_submit(pool, log_task, (void *)(uintptr_t)i));
     }
 
     TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_thread_pool_wait(pool));

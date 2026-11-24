@@ -19,8 +19,6 @@ function(kvs_set_target_warnings target_name)
         -Wold-style-definition
         -Wmissing-prototypes
         -Wmissing-declarations
-        -Wredundant-decls
-        -Wcast-align
         -Wpointer-arith
         -Wwrite-strings
         -fno-common

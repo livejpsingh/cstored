@@ -1,12 +1,9 @@
 #include "kvs/signal_handler.h"
 #include <unistd.h>
 #include <string.h>
+#include <signal.h>
 
-#if defined(_WIN32)
-#  define STDERR_FD 2
-#else
-#  define STDERR_FD STDERR_FILENO
-#endif
+#define STDERR_FD 2
 
 static volatile sig_atomic_t g_sigusr1_count = 0;
 static kvs_signal_config_t g_signal_config = {

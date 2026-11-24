@@ -26,10 +26,12 @@ extern "C" {
 #  define KVS_NODISCARD __attribute__((warn_unused_result))
 #  define KVS_LIKELY(x)   __builtin_expect(!!(x), 1)
 #  define KVS_UNLIKELY(x) __builtin_expect(!!(x), 0)
+#  define KVS_FALLTHROUGH __attribute__((fallthrough))
 #else
 #  define KVS_NODISCARD
 #  define KVS_LIKELY(x)   (x)
 #  define KVS_UNLIKELY(x) (x)
+#  define KVS_FALLTHROUGH ((void)0)
 #endif
 
 /*

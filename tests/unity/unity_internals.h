@@ -40,6 +40,7 @@ void UnityPrintNumberUnsigned(uint64_t number);
 void UnityConcludeTest(void);
 
 void UnityAssertEqualNumber(int64_t expected, int64_t actual, const char* msg, size_t line);
+void UnityAssertEqualNumberUnsigned(uint64_t expected, uint64_t actual, const char* msg, size_t line);
 void UnityAssertEqualIntArray(const int* expected, const int* actual, size_t num_elements, const char* msg, size_t line);
 void UnityAssertBits(uint64_t mask, uint64_t expected, uint64_t actual, const char* msg, size_t line);
 void UnityAssertEqualString(const char* expected, const char* actual, const char* msg, size_t line);
@@ -60,13 +61,13 @@ void UnityIgnore(const char* msg, size_t line);
     UnityAssertEqualNumber((int64_t)(expected), (int64_t)(actual), (message), (size_t)(line))
 
 #define UNITY_TEST_ASSERT_EQUAL_UINT(expected, actual, line, message) \
-    UnityAssertEqualNumber((int64_t)(expected), (int64_t)(actual), (message), (size_t)(line))
+    UnityAssertEqualNumberUnsigned((uint64_t)(expected), (uint64_t)(actual), (message), (size_t)(line))
 
 #define UNITY_TEST_ASSERT_EQUAL_INT64(expected, actual, line, message) \
     UnityAssertEqualNumber((int64_t)(expected), (int64_t)(actual), (message), (size_t)(line))
 
 #define UNITY_TEST_ASSERT_EQUAL_UINT64(expected, actual, line, message) \
-    UnityAssertEqualNumber((int64_t)(expected), (int64_t)(actual), (message), (size_t)(line))
+    UnityAssertEqualNumberUnsigned((uint64_t)(expected), (uint64_t)(actual), (message), (size_t)(line))
 
 #define UNITY_TEST_ASSERT_EQUAL_PTR(expected, actual, line, message) \
     UnityAssertEqualNumber((intptr_t)(expected), (intptr_t)(actual), (message), (size_t)(line))

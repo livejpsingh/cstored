@@ -105,6 +105,15 @@ void UnityAssertEqualNumber(int64_t expected, int64_t actual, const char* msg, s
     }
 }
 
+void UnityAssertEqualNumberUnsigned(uint64_t expected, uint64_t actual, const char* msg, size_t line) {
+    if (expected != actual) {
+        Unity.CurrentTestFailed = 1;
+        printf("\n%s:%zu: Expected %llu Was %llu. %s", Unity.TestFile, line,
+               (unsigned long long)expected, (unsigned long long)actual, msg ? msg : "");
+        TEST_ABORT();
+    }
+}
+
 void UnityAssertEqualString(const char* expected, const char* actual, const char* msg, size_t line) {
     if (expected == NULL && actual == NULL) {
         return;

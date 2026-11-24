@@ -11,12 +11,12 @@
 #  include <io.h>
 #  include <windows.h>
 #  define kvs_fsync(fd) _commit(fd)
-#  define kvs_ftruncate(fd, size) _chsize_s((fd), (size))
+#  define kvs_ftruncate(fd, size) _chsize_s((fd), (__int64)(size))
 #  define O_BINARY _O_BINARY
 #else
 #  include <unistd.h>
 #  define kvs_fsync(fd) fdatasync(fd)
-#  define kvs_ftruncate(fd, size) ftruncate((fd), (size))
+#  define kvs_ftruncate(fd, size) ftruncate((fd), (off_t)(size))
 #  ifndef O_BINARY
 #    define O_BINARY 0
 #  endif
@@ -29,7 +29,6 @@
  * Binary frame header.
  * Invariant: Exactly 24 bytes packed layout.
  */
-#pragma pack(push, 1)
 typedef struct {
     uint32_t magic;      /* KVS_AOF_MAGIC_COOKIE */
     uint8_t  op;         /* KVS_AOF_OP_PUT or KVS_AOF_OP_DELETE */
@@ -39,7 +38,18 @@ typedef struct {
     uint32_t key_len;    /* Explicit 32-bit key length */
     uint64_t val_len;    /* Explicit 64-bit value length */
 } kvs_aof_hdr_t;
-#pragma pack(pop)
+
+_Static_assert(sizeof(kvs_aof_hdr_t) == 24, "kvs_aof_hdr_t must be exactly 24 bytes");
+
+static inline uint32_t kvs_aof_calc_header_crc(const kvs_aof_hdr_t *hdr) {
+    uint8_t meta[16];
+    meta[0] = hdr->op;
+    meta[1] = hdr->flags;
+    memcpy(&meta[2], &hdr->reserved, sizeof(hdr->reserved));
+    memcpy(&meta[4], &hdr->key_len, sizeof(hdr->key_len));
+    memcpy(&meta[8], &hdr->val_len, sizeof(hdr->val_len));
+    return kvs_crc32c(0, meta, sizeof(meta));
+}
 
 struct kvs_aof {
     int fd;
@@ -255,11 +265,7 @@ kvs_status_t kvs_aof_append(
     hdr.val_len = (uint64_t)val_len;
 
     /* Compute CRC32C over header fields and payload */
-    uint32_t crc = kvs_crc32c(0, &hdr.op, 1);
-    crc = kvs_crc32c(crc, &hdr.flags, 1);
-    crc = kvs_crc32c(crc, &hdr.reserved, 2);
-    crc = kvs_crc32c(crc, &hdr.key_len, 4);
-    crc = kvs_crc32c(crc, &hdr.val_len, 8);
+    uint32_t crc = kvs_aof_calc_header_crc(&hdr);
     crc = kvs_crc32c(crc, key, key_len);
     if (val_len > 0) {
         crc = kvs_crc32c(crc, val, val_len);
@@ -357,14 +363,16 @@ kvs_status_t kvs_aof_recover(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
         /* Partial header written before crash */
         if (s != KVS_OK || bytes_read < sizeof(hdr)) {
             truncated += bytes_read;
-            kvs_ftruncate(aof->fd, (long)valid_offset);
+            int r = kvs_ftruncate(aof->fd, valid_offset);
+            (void)r;
             break;
         }
 
         /* Validate magic cookie */
         if (hdr.magic != KVS_AOF_MAGIC_COOKIE) {
             truncated += sizeof(hdr);
-            kvs_ftruncate(aof->fd, (long)valid_offset);
+            int r = kvs_ftruncate(aof->fd, valid_offset);
+            (void)r;
             break;
         }
 
@@ -372,7 +380,8 @@ kvs_status_t kvs_aof_recover(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
         if (hdr.key_len == 0 || hdr.key_len > KVS_MAX_KEY_LEN ||
             hdr.val_len > KVS_MAX_VAL_LEN) {
             truncated += sizeof(hdr);
-            kvs_ftruncate(aof->fd, (long)valid_offset);
+            int r = kvs_ftruncate(aof->fd, valid_offset);
+            (void)r;
             break;
         }
 
@@ -388,7 +397,8 @@ kvs_status_t kvs_aof_recover(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
         if (s != KVS_OK) {
             free(key);
             truncated += sizeof(hdr) + k_read;
-            kvs_ftruncate(aof->fd, (long)valid_offset);
+            int r = kvs_ftruncate(aof->fd, valid_offset);
+            (void)r;
             break;
         }
         key[hdr.key_len] = '\0';
@@ -408,17 +418,14 @@ kvs_status_t kvs_aof_recover(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
                 free(key);
                 free(val);
                 truncated += sizeof(hdr) + hdr.key_len + v_read;
-                kvs_ftruncate(aof->fd, (long)valid_offset);
+                int r = kvs_ftruncate(aof->fd, valid_offset);
+                (void)r;
                 break;
             }
         }
 
         /* Verify CRC32C */
-        uint32_t expected_crc = kvs_crc32c(0, &hdr.op, 1);
-        expected_crc = kvs_crc32c(expected_crc, &hdr.flags, 1);
-        expected_crc = kvs_crc32c(expected_crc, &hdr.reserved, 2);
-        expected_crc = kvs_crc32c(expected_crc, &hdr.key_len, 4);
-        expected_crc = kvs_crc32c(expected_crc, &hdr.val_len, 8);
+        uint32_t expected_crc = kvs_aof_calc_header_crc(&hdr);
         expected_crc = kvs_crc32c(expected_crc, key, hdr.key_len);
         if (hdr.val_len > 0) {
             expected_crc = kvs_crc32c(expected_crc, val, (size_t)hdr.val_len);
@@ -429,7 +436,8 @@ kvs_status_t kvs_aof_recover(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
             free(key);
             free(val);
             truncated += sizeof(hdr) + hdr.key_len + (size_t)hdr.val_len;
-            kvs_ftruncate(aof->fd, (long)valid_offset);
+            int r = kvs_ftruncate(aof->fd, valid_offset);
+            (void)r;
             break;
         }
 
@@ -486,11 +494,7 @@ static void kvs_aof_compact_callback(
     hdr.key_len = (uint32_t)key_len;
     hdr.val_len = (uint64_t)val_len;
 
-    uint32_t crc = kvs_crc32c(0, &hdr.op, 1);
-    crc = kvs_crc32c(crc, &hdr.flags, 1);
-    crc = kvs_crc32c(crc, &hdr.reserved, 2);
-    crc = kvs_crc32c(crc, &hdr.key_len, 4);
-    crc = kvs_crc32c(crc, &hdr.val_len, 8);
+    uint32_t crc = kvs_aof_calc_header_crc(&hdr);
     crc = kvs_crc32c(crc, key, key_len);
     if (val_len > 0) {
         crc = kvs_crc32c(crc, val, val_len);
@@ -538,13 +542,14 @@ kvs_status_t kvs_aof_compact(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
     kvs_status_t s = kvs_concurrent_ht_for_each(ht, kvs_aof_compact_callback, &ctx);
     if (s != KVS_OK || ctx.status != KVS_OK) {
         close(tmp_fd);
-        remove(tmp_path);
+        (void)remove(tmp_path);
         pthread_mutex_unlock(&aof->append_lock);
         return (s != KVS_OK) ? s : ctx.status;
     }
 
     /* Force durability of snapshot file before atomic swap */
-    kvs_fsync(tmp_fd);
+    int sync_rc = kvs_fsync(tmp_fd);
+    (void)sync_rc;
     close(tmp_fd);
 
     /* Close old log file */
@@ -553,7 +558,7 @@ kvs_status_t kvs_aof_compact(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
     /* Atomic rename replaces the old log with the compacted snapshot */
 #if defined(_WIN32)
     /* Windows rename does not atomically overwrite if destination exists */
-    remove(aof->filepath);
+    (void)remove(aof->filepath);
 #endif
     if (rename(tmp_path, aof->filepath) != 0) {
         pthread_mutex_unlock(&aof->append_lock);
@@ -603,7 +608,8 @@ void kvs_aof_close(kvs_aof_t *aof) {
 
     pthread_mutex_lock(&aof->append_lock);
     if (aof->fd >= 0) {
-        kvs_fsync(aof->fd);
+        int sync_rc = kvs_fsync(aof->fd);
+        (void)sync_rc;
         close(aof->fd);
         aof->fd = -1;
     }

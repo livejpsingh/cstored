@@ -15,11 +15,11 @@
 static const char *TEST_AOF_PATH = "test_store.aof";
 
 void setUp(void) {
-    remove(TEST_AOF_PATH);
+    (void)remove(TEST_AOF_PATH);
 }
 
 void tearDown(void) {
-    remove(TEST_AOF_PATH);
+    (void)remove(TEST_AOF_PATH);
 }
 
 /* Test 1: Append operations, sync, and recover into clean table */
@@ -140,7 +140,8 @@ static void test_aof_partial_write_truncation(void) {
     FILE *fp = fopen(TEST_AOF_PATH, "ab");
     TEST_ASSERT_NOT_NULL(fp);
     const char garbage[] = "CORRUPT_BYTES";
-    fwrite(garbage, 1, sizeof(garbage), fp);
+    size_t written = fwrite(garbage, 1, sizeof(garbage), fp);
+    (void)written;
     fclose(fp);
 
     /* Recover */

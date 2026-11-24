@@ -69,22 +69,22 @@ uint64_t kvs_hash64(const void *key, size_t len, uint64_t seed) {
     switch (len & 7) {
         case 7:
             k1 ^= ((uint64_t)tail[6]) << 48;
-            /* FALLTHROUGH */
+            KVS_FALLTHROUGH;
         case 6:
             k1 ^= ((uint64_t)tail[5]) << 40;
-            /* FALLTHROUGH */
+            KVS_FALLTHROUGH;
         case 5:
             k1 ^= ((uint64_t)tail[4]) << 32;
-            /* FALLTHROUGH */
+            KVS_FALLTHROUGH;
         case 4:
             k1 ^= ((uint64_t)tail[3]) << 24;
-            /* FALLTHROUGH */
+            KVS_FALLTHROUGH;
         case 3:
             k1 ^= ((uint64_t)tail[2]) << 16;
-            /* FALLTHROUGH */
+            KVS_FALLTHROUGH;
         case 2:
             k1 ^= ((uint64_t)tail[1]) << 8;
-            /* FALLTHROUGH */
+            KVS_FALLTHROUGH;
         case 1:
             k1 ^= ((uint64_t)tail[0]);
             k1 *= C1;

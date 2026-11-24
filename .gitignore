@@ -1,0 +1,23 @@
+# Build directories
+build/
+bin/
+lib/
+out/
+CMakeUserPresets.json
+
+# Clang / IDE artifacts
+.cache/
+.vscode/
+.idea/
+compile_commands.json
+
+# Valgrind / Profiler logs
+valgrind-*.log
+callgrind.out.*
+gmon.out
+
+# Core dumps and logs
+core
+core.*
+*.log
+*.dump

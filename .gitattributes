@@ -1,0 +1,8 @@
+# Enforce LF endings across all platforms for clean clang-format
+* text=auto eol=lf
+*.c text eol=lf
+*.h text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+CMakeLists.txt text eol=lf

@@ -33,7 +33,7 @@ static void safe_write_raw(int fd, const char *buf, size_t len) {
         if (n <= 0) {
             break;
         }
-        p += n;
+        p += (size_t)n;
         remaining -= (size_t)n;
     }
 }

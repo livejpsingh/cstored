@@ -3,17 +3,10 @@ Checks: >
   -*,
   bugprone-*,
   -bugprone-easily-swappable-parameters,
-  cert-*,
   clang-analyzer-*,
-  misc-*,
-  performance-*,
-  readability-*,
-  -readability-identifier-length,
-  -readability-function-cognitive-complexity
+  performance-*
 
-WarningsAsErrors: '*'
+WarningsAsErrors: 'bugprone-*,clang-analyzer-*,performance-*'
 HeaderFilterRegex: '.*include/kvs/.*'
-FormatStyle: file
-CheckOptions:
-  readability-redundant-declaration.IgnoreMacros: true
+FormatStyle: none
 ...

@@ -1,6 +1,13 @@
 #ifndef KVS_COMMON_H
 #define KVS_COMMON_H
 
+#ifndef _GNU_SOURCE
+#  define _GNU_SOURCE 1
+#endif
+#ifndef _POSIX_C_SOURCE
+#  define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>

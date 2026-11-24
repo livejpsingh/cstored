@@ -43,6 +43,8 @@ void resetTest(void);
 #define TEST_ASSERT_EQUAL_UINT(expected, actual)             UNITY_TEST_ASSERT_EQUAL_UINT((expected), (actual), __LINE__, " Expected Equal")
 #define TEST_ASSERT_EQUAL_INT64(expected, actual)            UNITY_TEST_ASSERT_EQUAL_INT64((expected), (actual), __LINE__, " Expected Equal")
 #define TEST_ASSERT_EQUAL_UINT64(expected, actual)           UNITY_TEST_ASSERT_EQUAL_UINT64((expected), (actual), __LINE__, " Expected Equal")
+#define TEST_ASSERT_EQUAL_HEX32(expected, actual)            UNITY_TEST_ASSERT_EQUAL_UINT((expected), (actual), __LINE__, " Expected Equal")
+#define TEST_ASSERT_NOT_EQUAL(expected, actual)              UNITY_TEST_ASSERT((expected) != (actual), __LINE__, " Expected Not Equal")
 #define TEST_ASSERT_EQUAL_PTR(expected, actual)              UNITY_TEST_ASSERT_EQUAL_PTR((expected), (actual), __LINE__, " Expected Equal")
 #define TEST_ASSERT_EQUAL_STRING(expected, actual)           UNITY_TEST_ASSERT_EQUAL_STRING((expected), (actual), __LINE__, " Expected Equal")
 #define TEST_ASSERT_EQUAL_MEMORY(expected, actual, len)      UNITY_TEST_ASSERT_EQUAL_MEMORY((expected), (actual), (len), __LINE__, " Expected Equal")

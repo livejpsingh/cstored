@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <time.h>
 
 #if defined(__unix__) || defined(__APPLE__) || defined(__linux__)
 #  include <unistd.h>
@@ -52,7 +53,8 @@ static void test_crash_kill_9_simulation(void) {
     }
 
     /* Parent process: sleep briefly so child is mid-write, then kill -9 */
-    usleep(15000); /* 15ms */
+    struct timespec req = {0, 15000000L}; /* 15ms */
+    nanosleep(&req, NULL);
     kill(pid, SIGKILL);
 
     int status = 0;

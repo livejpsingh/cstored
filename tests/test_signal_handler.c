@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 
 #if defined(O_BINARY)
 #  define TEST_O_BINARY O_BINARY

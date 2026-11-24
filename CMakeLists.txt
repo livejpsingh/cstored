@@ -8,7 +8,10 @@ project(cstored
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_C_EXTENSIONS ON)
+
+# Define standard POSIX / GNU feature test macros for Linux compilation
+add_compile_definitions(_GNU_SOURCE _POSIX_C_SOURCE=200809L)
 
 # Export compile commands for clang-tidy and LSP navigation
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -80,7 +83,7 @@ if(KVS_BUILD_TESTS)
 
     macro(kvs_add_unit_test test_name test_source)
         add_executable(${test_name} ${test_source})
-        target_link_libraries(${test_name} PRIVATE kvs_core unity)
+        target_link_libraries(${test_name} PRIVATE kvs_core unity Threads::Threads)
         target_include_directories(${test_name} PRIVATE
             "${CMAKE_CURRENT_SOURCE_DIR}/include"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests"

@@ -81,7 +81,7 @@ static kvs_status_t kvs_write_all(int fd, const void *buf, size_t count) {
         if (n == 0) {
             return KVS_ERR_SYS;
         }
-        p += n;
+        p += (size_t)n;
         remaining -= (size_t)n;
     }
     return KVS_OK;

@@ -66,7 +66,13 @@ jobs:
 
       - name: Build (${{ matrix.profile }})
         run: |
-          cmake --build build --parallel
+          if ! cmake --build build --parallel -v > build.log 2>&1; then
+            cat build.log
+            ERR=$(tail -n 25 build.log | tr '\n' ' ' | tr '"' "'")
+            echo "::error title=Build Failure::$ERR"
+            exit 1
+          fi
+          cat build.log
 
       - name: Run Complete Test Suite (${{ matrix.profile }})
         run: |

@@ -65,8 +65,7 @@ static void test_aof_corrupt_magic_recovery(void) {
     TEST_ASSERT_NOT_NULL(fp);
 
     uint8_t bad_frame[24] = {0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00};
-    size_t written = fwrite(bad_frame, 1, sizeof(bad_frame), fp);
-    (void)written;
+    TEST_ASSERT_EQUAL_UINT(sizeof(bad_frame), fwrite(bad_frame, 1, sizeof(bad_frame), fp));
     fclose(fp);
 
     kvs_aof_t *aof = NULL;

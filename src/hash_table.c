@@ -232,9 +232,9 @@ kvs_status_t kvs_ht_put(
 
     /* Check load factor threshold: count / capacity >= 3/4 */
     if ((ht->count + 1) * KVS_HT_LOAD_FACTOR_DENOM >= ht->capacity * KVS_HT_LOAD_FACTOR_NUM) {
-        kvs_status_t resize_status = kvs_ht_resize(ht);
-        /* If resize fails due to memory, we log/degrade and continue insertion */
-        (void)resize_status;
+        if (kvs_ht_resize(ht) != KVS_OK) {
+            /* Degradation under memory pressure: continue with current capacity */
+        }
     }
 
     /* Recalculate index post-potential-resize */

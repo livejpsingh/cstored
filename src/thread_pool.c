@@ -44,8 +44,7 @@ static void *kvs_worker_routine(void *arg) {
     kvs_thread_pool_t *pool = (kvs_thread_pool_t *)arg;
 
     while (1) {
-        int lock_rc = pthread_mutex_lock(&pool->lock);
-        (void)lock_rc;
+        pthread_mutex_lock(&pool->lock);
 
         /* Wait until there is a task or a shutdown signal */
         while (!pool->shutdown && pool->queue_head == NULL) {

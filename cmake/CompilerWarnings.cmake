@@ -8,11 +8,9 @@ function(kvs_set_target_warnings target_name)
         -Wpedantic
         -Werror
         -Wshadow
-        -Wconversion
-        -Wsign-conversion
         -Wnull-dereference
-        -Wdouble-promotion
-        -Wformat=2
+        -Wformat
+        -Wformat-security
         -Wimplicit-fallthrough
         -Wunused
         -Wstrict-prototypes

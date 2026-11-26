@@ -140,8 +140,7 @@ static void test_aof_partial_write_truncation(void) {
     FILE *fp = fopen(TEST_AOF_PATH, "ab");
     TEST_ASSERT_NOT_NULL(fp);
     const char garbage[] = "CORRUPT_BYTES";
-    size_t written = fwrite(garbage, 1, sizeof(garbage), fp);
-    (void)written;
+    TEST_ASSERT_EQUAL_UINT(sizeof(garbage), fwrite(garbage, 1, sizeof(garbage), fp));
     fclose(fp);
 
     /* Recover */

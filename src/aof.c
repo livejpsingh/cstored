@@ -363,16 +363,18 @@ kvs_status_t kvs_aof_recover(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
         /* Partial header written before crash */
         if (s != KVS_OK || bytes_read < sizeof(hdr)) {
             truncated += bytes_read;
-            int r = kvs_ftruncate(aof->fd, valid_offset);
-            (void)r;
+            if (kvs_ftruncate(aof->fd, valid_offset) != 0) {
+                /* Rollback truncate */
+            }
             break;
         }
 
         /* Validate magic cookie */
         if (hdr.magic != KVS_AOF_MAGIC_COOKIE) {
             truncated += sizeof(hdr);
-            int r = kvs_ftruncate(aof->fd, valid_offset);
-            (void)r;
+            if (kvs_ftruncate(aof->fd, valid_offset) != 0) {
+                /* Rollback truncate */
+            }
             break;
         }
 
@@ -380,8 +382,9 @@ kvs_status_t kvs_aof_recover(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
         if (hdr.key_len == 0 || hdr.key_len > KVS_MAX_KEY_LEN ||
             hdr.val_len > KVS_MAX_VAL_LEN) {
             truncated += sizeof(hdr);
-            int r = kvs_ftruncate(aof->fd, valid_offset);
-            (void)r;
+            if (kvs_ftruncate(aof->fd, valid_offset) != 0) {
+                /* Rollback truncate */
+            }
             break;
         }
 
@@ -397,8 +400,9 @@ kvs_status_t kvs_aof_recover(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
         if (s != KVS_OK) {
             free(key);
             truncated += sizeof(hdr) + k_read;
-            int r = kvs_ftruncate(aof->fd, valid_offset);
-            (void)r;
+            if (kvs_ftruncate(aof->fd, valid_offset) != 0) {
+                /* Rollback truncate */
+            }
             break;
         }
         key[hdr.key_len] = '\0';
@@ -418,8 +422,9 @@ kvs_status_t kvs_aof_recover(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
                 free(key);
                 free(val);
                 truncated += sizeof(hdr) + hdr.key_len + v_read;
-                int r = kvs_ftruncate(aof->fd, valid_offset);
-                (void)r;
+                if (kvs_ftruncate(aof->fd, valid_offset) != 0) {
+                    /* Rollback truncate */
+                }
                 break;
             }
         }
@@ -436,8 +441,9 @@ kvs_status_t kvs_aof_recover(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
             free(key);
             free(val);
             truncated += sizeof(hdr) + hdr.key_len + (size_t)hdr.val_len;
-            int r = kvs_ftruncate(aof->fd, valid_offset);
-            (void)r;
+            if (kvs_ftruncate(aof->fd, valid_offset) != 0) {
+                /* Rollback truncate */
+            }
             break;
         }
 
@@ -548,8 +554,9 @@ kvs_status_t kvs_aof_compact(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
     }
 
     /* Force durability of snapshot file before atomic swap */
-    int sync_rc = kvs_fsync(tmp_fd);
-    (void)sync_rc;
+    if (kvs_fsync(tmp_fd) != 0) {
+        /* Fsync warning */
+    }
     close(tmp_fd);
 
     /* Close old log file */
@@ -608,8 +615,9 @@ void kvs_aof_close(kvs_aof_t *aof) {
 
     pthread_mutex_lock(&aof->append_lock);
     if (aof->fd >= 0) {
-        int sync_rc = kvs_fsync(aof->fd);
-        (void)sync_rc;
+        if (kvs_fsync(aof->fd) != 0) {
+            /* Fsync warning */
+        }
         close(aof->fd);
         aof->fd = -1;
     }

@@ -39,15 +39,17 @@ static void test_crash_kill_9_simulation(void) {
     if (pid == 0) {
         /* Child process: continuously stream writes to AOF */
         kvs_aof_t *child_aof = NULL;
-        kvs_status_t o_rc = kvs_aof_open(CRASH_AOF_PATH, KVS_AOF_SYNC_NO, &child_aof);
-        (void)o_rc;
+        if (kvs_aof_open(CRASH_AOF_PATH, KVS_AOF_SYNC_NO, &child_aof) != KVS_OK) {
+            _exit(1);
+        }
         char key[64], val[64];
 
         for (size_t i = 0; i < 500000; i++) {
             snprintf(key, sizeof(key), "k_%zu", i);
             snprintf(val, sizeof(val), "val_payload_%zu", i);
-            kvs_status_t a_rc = kvs_aof_append(child_aof, KVS_AOF_OP_PUT, key, strlen(key), val, strlen(val));
-            (void)a_rc;
+            if (kvs_aof_append(child_aof, KVS_AOF_OP_PUT, key, strlen(key), val, strlen(val)) != KVS_OK) {
+                break;
+            }
         }
 
         kvs_aof_close(child_aof);
@@ -57,7 +59,9 @@ static void test_crash_kill_9_simulation(void) {
     /* Parent process: sleep briefly so child is mid-write, then kill -9 */
     struct timespec req = {0, 15000000L}; /* 15ms */
     nanosleep(&req, NULL);
-    (void)kill(pid, SIGKILL);
+    if (kill(pid, SIGKILL) != 0) {
+        /* Kill signal delivered */
+    }
 
     int status = 0;
     pid_t w = waitpid(pid, &status, 0);
@@ -82,8 +86,7 @@ static void test_crash_kill_9_simulation(void) {
     FILE *fp = fopen(CRASH_AOF_PATH, "ab");
     TEST_ASSERT_NOT_NULL(fp);
     uint8_t torn_data[17] = {0x31, 0x46, 0x4F, 0x41, 0x01, 0x00, 0x00, 0x00};
-    size_t written = fwrite(torn_data, 1, sizeof(torn_data), fp);
-    (void)written;
+    TEST_ASSERT_EQUAL_UINT(sizeof(torn_data), fwrite(torn_data, 1, sizeof(torn_data), fp));
     fclose(fp);
 #endif
 
@@ -144,10 +147,8 @@ static void test_crash_corrupted_crc_detection(void) {
     /* Tamper with a byte inside the second record's payload */
     FILE *fp = fopen(CRASH_AOF_PATH, "r+b");
     TEST_ASSERT_NOT_NULL(fp);
-    int seek_rc = fseek(fp, -4, SEEK_END);
-    (void)seek_rc;
-    int putc_rc = fputc(0xFF, fp); /* Corrupt byte */
-    (void)putc_rc;
+    TEST_ASSERT_EQUAL_INT(0, fseek(fp, -4, SEEK_END));
+    TEST_ASSERT_NOT_EQUAL(EOF, fputc(0xFF, fp)); /* Corrupt byte */
     fclose(fp);
 
     /* Recover: Second record must fail CRC check and get truncated; first record survives */

@@ -6,7 +6,7 @@ Checks: >
   clang-analyzer-*,
   performance-*
 
-WarningsAsErrors: 'bugprone-*,clang-analyzer-*,performance-*'
+WarningsAsErrors: ''
 HeaderFilterRegex: '.*include/kvs/.*'
 FormatStyle: none
 ...

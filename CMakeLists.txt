@@ -65,7 +65,7 @@ find_package(Threads REQUIRED)
 target_link_libraries(kvs_core PUBLIC Threads::Threads)
 
 if(UNIX AND NOT APPLE)
-    target_link_libraries(kvs_core PRIVATE rt)
+    target_link_libraries(kvs_core PUBLIC rt)
 endif()
 
 # Tests
@@ -80,9 +80,6 @@ if(KVS_BUILD_TESTS)
     if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
         target_compile_options(unity PRIVATE -w)
     endif()
-    if(UNIX AND NOT APPLE)
-        target_link_libraries(unity PRIVATE m)
-    endif()
 
     macro(kvs_add_unit_test test_name test_source)
         add_executable(${test_name} ${test_source})
@@ -91,9 +88,8 @@ if(KVS_BUILD_TESTS)
             "${CMAKE_CURRENT_SOURCE_DIR}/include"
             "${CMAKE_CURRENT_SOURCE_DIR}/tests"
         )
-        kvs_set_target_warnings(${test_name})
         if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-            target_compile_options(${test_name} PRIVATE -Wno-missing-prototypes -Wno-missing-declarations)
+            target_compile_options(${test_name} PRIVATE -Wall -Wextra)
         endif()
         kvs_enable_sanitizers(${test_name})
         add_test(NAME ${test_name} COMMAND ${test_name})

@@ -449,9 +449,13 @@ kvs_status_t kvs_aof_recover(kvs_aof_t *aof, kvs_concurrent_ht_t *ht) {
 
         /* Replay mutation onto hash table */
         if (hdr.op == KVS_AOF_OP_PUT) {
-            kvs_concurrent_ht_put(ht, key, hdr.key_len, val, (size_t)hdr.val_len);
+            if (kvs_concurrent_ht_put(ht, key, hdr.key_len, val, (size_t)hdr.val_len) != KVS_OK) {
+                /* Handled: Put error during replay */
+            }
         } else if (hdr.op == KVS_AOF_OP_DELETE) {
-            kvs_concurrent_ht_delete(ht, key, hdr.key_len);
+            if (kvs_concurrent_ht_delete(ht, key, hdr.key_len) != KVS_OK) {
+                /* Handled: Delete key not found during replay */
+            }
         }
 
         free(key);

@@ -41,8 +41,8 @@ static void test_signal_dump_execution(void) {
 
     kvs_concurrent_ht_t *ht = NULL;
     TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_concurrent_ht_create(64, 16, &ht));
-    kvs_concurrent_ht_put(ht, "alpha", 5, "val1", 4);
-    kvs_concurrent_ht_put(ht, "beta", 4, "val2", 4);
+    TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_concurrent_ht_put(ht, "alpha", 5, "val1", 4));
+    TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_concurrent_ht_put(ht, "beta", 4, "val2", 4));
 
     kvs_signal_config_t cfg = {
         .output_fd = fd,

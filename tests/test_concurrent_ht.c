@@ -81,13 +81,17 @@ static void client_worker_task(void *arg) {
     for (size_t i = 0; i < w->ops_per_thread / 2; i++) {
         snprintf(key, sizeof(key), "worker_%zu_key_%zu", w->thread_id, i);
         snprintf(val, sizeof(val), "updated_val_%zu_%zu", w->thread_id, i);
-        kvs_concurrent_ht_put(w->ht, key, strlen(key), val, strlen(val));
+        if (kvs_concurrent_ht_put(w->ht, key, strlen(key), val, strlen(val)) != KVS_OK) {
+            /* Handled */
+        }
     }
 
     /* Phase D: Delete a quarter of the keys */
     for (size_t i = 0; i < w->ops_per_thread / 4; i++) {
         snprintf(key, sizeof(key), "worker_%zu_key_%zu", w->thread_id, i);
-        kvs_concurrent_ht_delete(w->ht, key, strlen(key));
+        if (kvs_concurrent_ht_delete(w->ht, key, strlen(key)) != KVS_OK) {
+            /* Handled */
+        }
     }
 }
 

@@ -82,15 +82,15 @@ static void test_aof_compaction(void) {
     for (size_t i = 0; i < 500; i++) {
         snprintf(k, sizeof(k), "comp_k_%zu", i);
         snprintf(v, sizeof(v), "comp_v_%zu", i);
-        kvs_concurrent_ht_put(ht, k, strlen(k), v, strlen(v));
-        kvs_aof_append(aof, KVS_AOF_OP_PUT, k, strlen(k), v, strlen(v));
+        TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_concurrent_ht_put(ht, k, strlen(k), v, strlen(v)));
+        TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_aof_append(aof, KVS_AOF_OP_PUT, k, strlen(k), v, strlen(v)));
     }
 
     /* Delete 400 entries */
     for (size_t i = 0; i < 400; i++) {
         snprintf(k, sizeof(k), "comp_k_%zu", i);
-        kvs_concurrent_ht_delete(ht, k, strlen(k));
-        kvs_aof_append(aof, KVS_AOF_OP_DELETE, k, strlen(k), NULL, 0));
+        TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_concurrent_ht_delete(ht, k, strlen(k)));
+        TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_aof_append(aof, KVS_AOF_OP_DELETE, k, strlen(k), NULL, 0));
     }
 
     struct stat st_before;

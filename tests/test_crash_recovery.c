@@ -102,7 +102,7 @@ static void test_crash_kill_9_simulation(void) {
     TEST_ASSERT_EQUAL_INT(KVS_OK, rec_status);
 
     kvs_aof_stats_t stats;
-    kvs_aof_get_stats(recover_aof, &stats);
+    TEST_ASSERT_EQUAL_INT(KVS_OK, kvs_aof_get_stats(recover_aof, &stats));
     TEST_ASSERT_TRUE(stats.recovered_ops > 0);
 
     /* The table size must match recovered ops */

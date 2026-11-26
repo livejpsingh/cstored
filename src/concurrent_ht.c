@@ -63,10 +63,11 @@ static size_t kvs_cht_next_pow2(size_t n) {
 
 /*
  * Computes stripe index from 64-bit hash.
- * Uses high bits of the hash to ensure independence from lower bucket index bits.
+ * Invariant: Every bucket index maps to exactly one stripe because
+ * ht->capacity is a multiple of ht->num_stripes (both powers of 2).
  */
 static inline size_t kvs_cht_stripe_idx(const kvs_concurrent_ht_t *ht, uint64_t hash) {
-    return (size_t)((hash >> 32) & ht->stripe_mask);
+    return (size_t)(hash & ht->stripe_mask);
 }
 
 /*

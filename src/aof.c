@@ -595,7 +595,10 @@ kvs_status_t kvs_aof_get_stats(const kvs_aof_t *aof, kvs_aof_stats_t *out_stats)
     if (aof == NULL || out_stats == NULL) {
         return KVS_ERR_INVALID_ARG;
     }
+    kvs_aof_t *mut_aof = (kvs_aof_t *)aof;
+    pthread_mutex_lock(&mut_aof->append_lock);
     *out_stats = aof->stats;
+    pthread_mutex_unlock(&mut_aof->append_lock);
     return KVS_OK;
 }
 

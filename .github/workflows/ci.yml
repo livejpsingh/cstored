@@ -76,7 +76,13 @@ jobs:
 
       - name: Run Complete Test Suite (${{ matrix.profile }})
         run: |
-          ctest --test-dir build --output-on-failure
+          if ! ctest --test-dir build --output-on-failure > ctest.log 2>&1; then
+            cat ctest.log
+            ERR=$(tail -n 25 ctest.log | tr '\n' ' ' | tr '"' "'")
+            echo "::error title=CTest Failure::$ERR"
+            exit 1
+          fi
+          cat ctest.log
 
       - name: Run Valgrind Full Leak & Error Check
         if: ${{ matrix.valgrind }}
@@ -84,10 +90,16 @@ jobs:
           for test_bin in build/bin/test_*; do
             if [ "$(basename "$test_bin")" != "test_crash_recovery" ]; then
               echo "Running Valgrind on $test_bin"
-              valgrind --leak-check=full \
+              if ! valgrind --leak-check=full \
                        --show-leak-kinds=all \
                        --track-origins=yes \
                        --error-exitcode=1 \
-                       "$test_bin"
+                       "$test_bin" > valgrind.log 2>&1; then
+                cat valgrind.log
+                ERR=$(tail -n 25 valgrind.log | tr '\n' ' ' | tr '"' "'")
+                echo "::error title=Valgrind Failure ($test_bin)::$ERR"
+                exit 1
+              fi
+              cat valgrind.log
             fi
           done

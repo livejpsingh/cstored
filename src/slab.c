@@ -274,7 +274,29 @@ kvs_status_t kvs_slab_free(kvs_slab_pool_t *pool, void *ptr) {
     }
 
     const size_t hdr_offset = kvs_align_up(sizeof(kvs_chunk_hdr_t), KVS_DEFAULT_ALIGNMENT);
-    kvs_chunk_hdr_t *hdr = (kvs_chunk_hdr_t *)(void *)(((uint8_t *)ptr) - hdr_offset);
+    const uint8_t *raw_ptr = ((const uint8_t *)ptr) - hdr_offset;
+
+    /* Verify pointer belongs to one of this pool's slabs before any dereference */
+    kvs_slab_t *slab = pool->slabs_head;
+    bool valid_slab = false;
+    while (slab != NULL) {
+        if (slab->magic == KVS_SLAB_MAGIC &&
+            raw_ptr >= slab->payload_start &&
+            raw_ptr < slab->payload_end) {
+            size_t offset = (size_t)(raw_ptr - slab->payload_start);
+            if ((offset % pool->chunk_stride) == 0) {
+                valid_slab = true;
+                break;
+            }
+        }
+        slab = slab->next;
+    }
+
+    if (!valid_slab) {
+        return KVS_ERR_INVALID_ARG; /* Foreign pointer (e.g. stack, malloc heap, or out of range) */
+    }
+
+    kvs_chunk_hdr_t *hdr = (kvs_chunk_hdr_t *)(void *)raw_ptr;
 
     /* Double-free detection pitfall avoided */
     if (hdr->magic == KVS_CHUNK_MAGIC_FREE) {
@@ -285,14 +307,7 @@ kvs_status_t kvs_slab_free(kvs_slab_pool_t *pool, void *ptr) {
         return KVS_ERR_INVALID_ARG; /* Corrupted or foreign pointer */
     }
 
-    kvs_slab_t *slab = hdr->owning_slab;
-    if (slab == NULL || slab->magic != KVS_SLAB_MAGIC) {
-        return KVS_ERR_INVALID_ARG;
-    }
-
-    /* Bounds check: pointer must reside within its owning slab's payload boundary */
-    const uint8_t *raw_ptr = (const uint8_t *)hdr;
-    if (raw_ptr < slab->payload_start || raw_ptr >= slab->payload_end) {
+    if (hdr->owning_slab != slab) {
         return KVS_ERR_INVALID_ARG;
     }
 

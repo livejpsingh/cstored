@@ -78,7 +78,10 @@ jobs:
         run: |
           if ! ctest --test-dir build --output-on-failure > ctest.log 2>&1; then
             cat ctest.log
-            ERR=$(tail -n 25 ctest.log | tr '\n' ' ' | tr '"' "'")
+            ERR=$(grep -E "(WARNING|FATAL): ThreadSanitizer" -A 25 ctest.log | head -n 30 | tr '\n' ' ' | tr '"' "'")
+            if [ -z "$ERR" ]; then
+              ERR=$(tail -n 25 ctest.log | tr '\n' ' ' | tr '"' "'")
+            fi
             echo "::error title=CTest Failure::$ERR"
             exit 1
           fi

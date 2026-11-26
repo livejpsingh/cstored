@@ -72,7 +72,9 @@ static void kvs_ht_free_node(kvs_hash_table_t *ht, kvs_node_t *node) {
         return;
     }
     if (ht->node_pool != NULL) {
-        kvs_slab_free(ht->node_pool, node);
+        if (kvs_slab_free(ht->node_pool, node) != KVS_OK) {
+            /* Ignore status during node deallocation */
+        }
     } else {
         free(node);
     }
